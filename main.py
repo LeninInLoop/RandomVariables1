@@ -1,4 +1,3 @@
-import random
 from typing import List, Dict, Tuple
 from collections import Counter
 import matplotlib.pyplot as plt
@@ -51,7 +50,7 @@ def display_results(value_counts: Dict[float, int]) -> None:
 
 
 def generate_random_floats() -> List[float]:
-    return [round_to_decimals(random.random(), 3) for _ in range(10 ** 6)]
+    return [value for value in np.random.random( 10 ** 6 )]
 
 def create_value_bins() -> List[float]:
     return [i / 1000.0 for i in range(1001)]
@@ -61,13 +60,14 @@ def initialize_value_count_dict() -> Dict[float, int]:
 
 def count_values_by_method(value_bins: List[float], random_floats: List[float], method: int) -> Dict[float, int]:
     value_count_dict = initialize_value_count_dict()
+    rounded_random_floats = [round_to_decimals(value, 3) for value in random_floats]
     if method == METHOD_MANUAL:  # O(n^2) Algorithm
         for bin_value in value_bins:
-            for random_float in random_floats:
+            for random_float in rounded_random_floats:
                 if random_float == bin_value:
                     value_count_dict[bin_value] += 1
     elif method == METHOD_COUNTER_CLASS:  # O(n log n) Algorithm
-        random_counts = Counter(random_floats)
+        random_counts = Counter(rounded_random_floats)
         for number, count in random_counts.items():
             if number in value_count_dict:
                 value_count_dict[number] += count
@@ -153,6 +153,52 @@ def create_fy_distribution_function_values() -> Dict[float, float]:
         else:
             y_values.append(1)
     return dict(zip(x_values, y_values))
+
+def fy_distribution_function(y_value: float) -> float:
+    if y_value <= 0.3:
+        return (0.5 / 0.3) * y_value
+    elif 0.3 < y_value <= 0.6:
+        return 0.5
+    elif 0.6 < y_value <= 2:
+        return ((0.5 / 1.4) * (y_value - 0.6)) + 0.5
+    else:
+        return 1
+
+def create_fz_distribution_function_values() -> Dict[float, float]:
+    x_values = create_linear_space(0, 7, 1000)
+    y_values = []
+    for value in x_values:
+        if value <= -0.5:
+            y_values.append(value)
+        elif -0.5 <= value <= 0.2:
+            y_values.append((0.2 / 0.7) * (value + 0.5))
+        elif 0.2 < value <= 0.5:
+            y_values.append(0.2)
+        elif 0.5 < value <= 1:
+            y_values.append(((0.2 / 0.5) * (value - 0.5)) + 0.2)
+        elif 1 < value <= 5:
+            y_values.append(0.4)
+        elif 5 < value <= 7:
+            y_values.append(((0.6 / 2) * (value - 5)) + 0.4)
+        else:
+            y_values.append(1)
+    return dict(zip(x_values, y_values))
+
+def fz_distribution_function(z_value: float) -> float:
+    if z_value < -0.5:
+        return 0
+    elif -0.5 < z_value <= 0.2:
+        return (0.2 / 0.7) * (z_value + 0.5)
+    elif 0.2 < z_value <= 0.5:
+        return 0.2
+    elif 0.5 < z_value <= 1:
+        return ((0.2 / 0.5) * (z_value - 0.5)) + 0.2
+    elif 1 < z_value <= 5:
+        return 0.4
+    elif 5 < z_value <= 7:
+        return ((0.6 / 2) * (z_value - 5)) + 0.4
+    else:
+        return 1
 
 def calculate_pdf_from_cdf(cdf_function: Dict[float, float]) -> Dict[float, float]:
     """
@@ -250,11 +296,27 @@ def fy_inverse_distribution_function(fy_value: float) -> float:
     if fy_value < 0.5:
         return fy_value/(0.5 / 0.3)
     elif fy_value == 0.5:
-        return random.uniform(0.3, 0.6)
+        return np.random.uniform(0.3, 0.6)
     elif 0.5 < fy_value < 1:
         return (fy_value - 0.5) * (1.4 / 0.5) + 0.6
     elif fy_value >= 1:
-        return random.uniform(2, 1000)
+        return np.random.uniform(2, 1000)
+
+def fz_inverse_distribution_function(fz_value: float) -> float:
+    if fz_value < -0.5:
+        return 0
+    elif -0.5 <= fz_value < 0.2:
+        return (0.7 / 0.2) * fz_value - 0.5
+    elif fz_value == 0.2:
+        return np.random.uniform(-0.5, 0.2)  # Random value in this range
+    elif 0.2 < fz_value < 0.4:
+        return (fz_value - 0.2) * (0.5 / 0.2) + 0.5
+    elif fz_value == 0.4:
+        return np.random.uniform(1, 5)  # Random value in this range
+    elif 0.4 < fz_value < 1:
+        return (fz_value - 0.4) * (2 / 0.6) + 5
+    elif fz_value == 1:
+        return np.random.uniform(7, 1000)  # Random value greater than 7
 
 def plot_function(func, x_range: tuple, y_range: tuple, num_points: int = 1000, title: str = "Function Plot", x_label: str = "X",
                   y_label: str = "Y", display: bool = False, file_name:str = "plot.png") -> None:
@@ -291,6 +353,50 @@ def plot_function(func, x_range: tuple, y_range: tuple, num_points: int = 1000, 
     else:
         plt.close()
 
+def calculate_empirical_cdf_probabilities(
+        random_floats: List[float],
+        func, # Function that returns F^-1(y) values with the given y
+        display: bool = False,
+        filename: str = "empirical_cdf_probabilities.png"
+    ):
+
+    # we extract the probability FROM THE CDF CREATED FROM PDF OF UNIFORM.
+    # in cumulative_probabilities we have [1/10 ** 6, 2/ 10**6, ... ], in which indices that we have a unique data, we
+    # extract that probability and then plot it.
+    # When we sort our data, the first point is greater than or equal to 1/n of the data,
+    # the second point is greater than or equal to 2/n of the data, and so on, until the last point which is greater
+    # than or equal to n/n (all) of the data. => Fx(x) =  P( X <= x )
+
+    # Suppose we have the following sorted data: [1, 2, 2, 3, 5]
+    #
+    # The cumulative probabilities would be [1/5, 2/5, 3/5, 4/5, 5/5]
+    # This means:
+    #
+    # 1/5 (20%) of the data is ≤ 1
+    # 2/5 (40%) of the data is ≤ 2
+    # 3/5 (60%) of the data is ≤ 3
+    # 4/5 (80%) of the data is ≤ 4
+    # 5/5 (100%) of the data is ≤ 5
+    # this method assumes each data point is equally likely (has equal weight). ( PDF = UNIFORM  )
+
+    sample_data = [func(value) for value in random_floats]
+
+    # Sort the data points
+    sorted_data = np.sort(sample_data)
+    cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6 # CDF OF UNIFORM
+
+    # Plotting the CDF
+    plt.figure(figsize=(10, 6))
+    plt.step(sorted_data, cumulative_probabilities, where='post')
+    plt.xlabel('Value')
+    plt.ylabel('Cumulative Probability')
+    plt.title('Cumulative Distribution Function')
+    plt.grid(True)
+    plt.savefig(filename)
+    if display:
+        plt.show()
+    else:
+        plt.close()
 
 def main():
     random_floats = generate_random_floats()
@@ -304,27 +410,43 @@ def main():
         filename="rand_pdf_and_cdf_plot.png"
     )
 
-    # Create F(y) distribution function and save the plot
+    # METHOD 1 : ( INCLUDES PDF FUNCTION CALCULATIONS )
+    # Using values generated from create_fy_distribution_function_values to plot F(y) function
     fy_distribution_function_values = create_fy_distribution_function_values()
     save_pdf_and_cdf_plot_from_cdf(
         fy_distribution_function_values,
         display=False,
-        filename="F(y)_plot.png"
+        filename="F(y)_PLOT.png"
     )
+    # METHOD 2 : ( DOES NOT INCLUDE PDF FUNCTION CALCULATIONS )
+    # Using f(y) directly
+    plot_function(
+        func=fy_distribution_function,
+        x_range=(-0.1,7),
+        y_range=(0,1.1),
+        num_points=1000,
+        title="F(y)",
+        x_label="Y",
+        y_label="F(Y) without values",
+        display=False,
+        file_name="F(y)_PLOT_DIRECTLY.png"
+        )
 
+    # METHOD 1 :
     # Using values generated from create_fy_distribution_function_values to plot the inverse of F(y) function
     inverse_fy_distribution_function = calculate_inverse_from_dict(fy_distribution_function_values)
     save_pdf_and_cdf_plot_from_cdf(
         inverse_fy_distribution_function,
         display=False,
-        filename="F^-1(y)_plot_with_values.png",
         calculate_pdf=False,
+        filename="F^-1(y)_PLOT.png",
         x_range=(-0.1,1.1),
         y_range=(0,2.5),
         cdf_title = "F^-1(y) plot with values",
         cdf_y_label = "F^-1(y)"
     )
-
+    # METHOD 2 :
+    # Using inverse of f(y) directly
     plot_function(
         func=fy_inverse_distribution_function,
         x_range=(-0.1,1.1),
@@ -333,10 +455,76 @@ def main():
         title="F^-1(y)",
         x_label="Y",
         y_label="F^-1(Y) without values",
-        display=True,
-        file_name="F^-1(y)_plot_without_values.png"
+        display=False,
+        file_name="F^-1(y)_PLOT_DIRECTLY.png"
         )
 
+
+    # Calculate and plot the CDF of Fy(y)
+    calculate_empirical_cdf_probabilities(
+        random_floats,
+        fy_inverse_distribution_function,
+        display=True,
+        filename="empirical_cdf_probability_of_Fy(y).png"
+    )
+
+# -----------------------------------------------------------------------------------------------------
+    # METHOD 1 : ( INCLUDES PDF FUNCTION CALCULATIONS )
+    # Using values generated from create_fy_distribution_function_values to plot F(y) function
+    fz_distribution_function_values = create_fz_distribution_function_values()
+    save_pdf_and_cdf_plot_from_cdf(
+        fz_distribution_function_values,
+        display=False,
+        filename="F(z)_PLOT.png"
+    )
+    # METHOD 2 : ( DOES NOT INCLUDE PDF FUNCTION CALCULATIONS )
+    # Using f(z) directly
+    plot_function(
+        func=fz_distribution_function,
+        x_range=(-0.8,7),
+        y_range=(0,1.1),
+        num_points=1000,
+        title="F(z)",
+        x_label="Z",
+        y_label="F(Z) without values",
+        display=False,
+        file_name="F(Z)_PLOT_DIRECTLY.png"
+        )
+
+    # METHOD 1 :
+    # Using values generated from create_fz_distribution_function_values to plot the inverse of F(z) function
+    inverse_fz_distribution_function = calculate_inverse_from_dict(fz_distribution_function_values)
+    save_pdf_and_cdf_plot_from_cdf(
+        inverse_fz_distribution_function,
+        display=False,
+        calculate_pdf=False,
+        filename="F^-1(Z)_PLOT.png",
+        x_range=(-0.8,1.1),
+        y_range=(0,2.5),
+        cdf_title = "F^-1(Z) plot with values",
+        cdf_y_label = "F^-1(Z)"
+    )
+    # METHOD 2 :
+    # Using inverse of f(z) directly
+    plot_function(
+        func=fz_inverse_distribution_function,
+        x_range=(-0.8,1.1),
+        y_range=(0,2.5),
+        num_points=1000,
+        title="F^-1(z)",
+        x_label="Z",
+        y_label="F^-1(z) without values",
+        display=False,
+        file_name="F^-1(z)_PLOT_DIRECTLY.png"
+        )
+
+    # Calculate and plot the CDF of Fz(z)
+    calculate_empirical_cdf_probabilities(
+        random_floats,
+        fz_inverse_distribution_function,
+        display=True,
+        filename="empirical_cdf_probability_of_Fz(z).png"
+    )
 
 if __name__ == "__main__":
     main()
