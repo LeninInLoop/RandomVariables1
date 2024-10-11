@@ -1,5 +1,10 @@
-from typing import List, Dict, Tuple
+# Standard Library Imports
 from collections import Counter
+
+# Type Hinting Imports
+from typing import Callable, Dict, List, Tuple, Union
+
+# Third-Party Library Imports
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -29,6 +34,18 @@ def round_to_decimals(value: float, decimal_places: int = 0) -> float:
     return (value * multiplier + 0.5) // 1 / multiplier
 
 def display_results(value_counts: Dict[float, int]) -> None:
+    """
+    Display the frequency and percentage of values in a user-friendly format.
+
+    Parameters:
+    value_counts (Dict[float, int]): A dictionary where keys are value bins and values are frequencies.
+    total_count (int): The total number of samples (default is 1,000,000).
+
+    The function prints:
+    - Value ranges (with special handling for 0 and 1).
+    - The frequency of occurrences for each bin.
+    - The percentage of each bin's occurrences relative to the total count.
+    """
     print(" " * 9 + f"{'Value':<13} {'Frequency':<12} {'Percentage':<10}")
     print("-" * 50)
 
@@ -56,9 +73,28 @@ def create_value_bins() -> List[float]:
     return [i / 1000.0 for i in range(1001)]
 
 def initialize_value_count_dict() -> Dict[float, int]:
+    """
+    Initialize a dictionary for counting occurrences of each bin value.
+
+    Returns:
+    Dict[float, int]: A dictionary with bin values as keys and 0 as initial counts.
+    """
     return {i / 1000.0: 0 for i in range(1001)}
 
 def count_values_by_method(value_bins: List[float], random_floats: List[float], method: int) -> Dict[float, int]:
+    """
+    Count occurrences of rounded random floats in the specified value bins using a specified method.
+
+    Parameters:
+    value_bins (List[float]): A list of bin values to count occurrences against.
+    random_floats (List[float]): A list of random float values to be counted.
+    method (int): The counting method to use.
+                  METHOD_MANUAL (1) uses a manual O(n^2) algorithm.
+                  METHOD_COUNTER_CLASS (2) uses Python's Counter class for an O(n log n) approach.
+
+    Returns:
+    Dict[float, int]: A dictionary where keys are bin values and values are the counts of occurrences.
+    """
     value_count_dict = initialize_value_count_dict()
     rounded_random_floats = [round_to_decimals(value, 3) for value in random_floats]
     if method == METHOD_MANUAL:  # O(n^2) Algorithm
@@ -90,11 +126,19 @@ def calculate_cdf_from_pdf(pdf_values: List[float], x_values: List[float]) -> np
 
 def save_pdf_and_cdf_plot_from_pdf(value_counts: Dict[float, int], display: bool, filename: str = "pdf_and_cdf_plot.png"):
     """
-    Saves a distribution plot (histogram) and CDF of the random numbers.
+    Saves a plot with both the Probability Density Function (PDF) in two formats:
+    a histogram-based PDF and a line plot, as well as the Cumulative Distribution Function (CDF).
 
     Parameters:
-    value_counts (Dict[float, int]): A dictionary of x and y values representing the PDF.
+    value_counts (Dict[float, int]): A dictionary where keys are x-values and values are frequencies (PDF).
+    display (bool): If True, display the plot interactively; if False, save the plot as an image.
     filename (str): The name of the file to save the plot as (default is 'pdf_and_cdf_plot.png').
+
+    The function performs the following:
+    - Plots a histogram to represent the PDF (using the frequency from value_counts).
+    - Plots the PDF as a smooth line without a histogram.
+    - Computes and plots the CDF based on the PDF data.
+    - Displays the plot if `display` is True, or saves it to a file if `display` is False.
     """
     x_values = list(value_counts.keys())
     y_values = [count / 1000 for count in value_counts.values()]
@@ -138,9 +182,31 @@ def save_pdf_and_cdf_plot_from_pdf(value_counts: Dict[float, int], display: bool
         plt.close()
 
 def create_linear_space(start: float, end: float, num_points: int) -> List[float]:
+    """
+    Creates a list of evenly spaced numbers over a specified interval.
+
+    Parameters:
+    start (float): The starting value of the sequence.
+    end (float): The end value of the sequence.
+    num_points (int): Number of samples to generate.
+
+    Returns:
+    List[float]: A list of evenly spaced numbers.
+    """
     return np.linspace(start, end, num_points).tolist()
 
 def create_fy_distribution_function_values() -> Dict[float, float]:
+    """
+    Creates a discrete representation of the FY distribution function.
+
+    This function generates 1000 evenly spaced x-values between 0 and 7,
+    and calculates the corresponding y-values (cumulative probabilities)
+    based on the piecewise definition of the FY distribution function.
+
+    Returns:
+    Dict[float, float]: A dictionary mapping x-values to their corresponding
+                        cumulative probabilities.
+    """
     x_values = create_linear_space(0, 7, 1000)
     y_values = []
     for value in x_values:
@@ -155,6 +221,27 @@ def create_fy_distribution_function_values() -> Dict[float, float]:
     return dict(zip(x_values, y_values))
 
 def fy_distribution_function(y_value: float) -> float:
+    """
+    Calculates the cumulative distribution function (CDF) for the FY distribution.
+
+    This function defines a piecewise CDF with specific behaviors in different ranges of the input value.
+
+    Parameters:
+    y_value (float): The input value for which to calculate the CDF.
+
+    Returns:
+    float: The cumulative probability (between 0 and 1) for the given y_value.
+
+    The function is defined piecewise as follows:
+    1. For y_value <= 0.3:
+       Linear increase from 0 to 0.5
+    2. For 0.3 < y_value <= 0.6:
+       Constant at 0.5
+    3. For 0.6 < y_value <= 2:
+       Linear increase from 0.5 to 1
+    4. For y_value > 2:
+       Returns 1
+    """
     if y_value <= 0.3:
         return (0.5 / 0.3) * y_value
     elif 0.3 < y_value <= 0.6:
@@ -165,6 +252,17 @@ def fy_distribution_function(y_value: float) -> float:
         return 1
 
 def create_fz_distribution_function_values() -> Dict[float, float]:
+    """
+    Creates a discrete representation of the FZ distribution function.
+
+    This function generates 1000 evenly spaced x-values between 0 and 7,
+    and calculates the corresponding y-values (cumulative probabilities)
+    based on the piecewise definition of the FZ distribution function.
+
+    Returns:
+    Dict[float, float]: A dictionary mapping x-values to their corresponding
+                        cumulative probabilities.
+    """
     x_values = create_linear_space(0, 7, 1000)
     y_values = []
     for value in x_values:
@@ -185,6 +283,33 @@ def create_fz_distribution_function_values() -> Dict[float, float]:
     return dict(zip(x_values, y_values))
 
 def fz_distribution_function(z_value: float) -> float:
+    """
+    Calculates the cumulative distribution function (CDF) for a custom distribution.
+
+    This function defines a piecewise CDF with specific behaviors in different ranges of the input value.
+
+    Parameters:
+    z_value (float): The input value for which to calculate the CDF.
+
+    Returns:
+    float: The cumulative probability (between 0 and 1) for the given z_value.
+
+    The function is defined piecewise as follows:
+    1. For z_value < -0.5:
+       Returns 0
+    2. For -0.5 < z_value <= 0.2:
+       Linear increase from 0 to 0.2
+    3. For 0.2 < z_value <= 0.5:
+       Constant at 0.2
+    4. For 0.5 < z_value <= 1:
+       Linear increase from 0.2 to 0.4
+    5. For 1 < z_value <= 5:
+       Constant at 0.4
+    6. For 5 < z_value <= 7:
+       Linear increase from 0.4 to 1
+    7. For z_value > 7:
+       Returns 1
+    """
     if z_value < -0.5:
         return 0
     elif -0.5 < z_value <= 0.2:
@@ -223,16 +348,26 @@ def save_pdf_and_cdf_plot_from_cdf(
         display: bool,
         filename: str,
         calculate_pdf: bool = True,
-        x_range: Tuple[float | int, float | int] = (0, 7),
-        y_range: Tuple[float | int, float | int] = (0, 2.5),
+        x_range: Tuple[Union[float, int], Union[float, int]] = (0, 7),
+        y_range: Tuple[Union[float, int], Union[float, int]] = (0, 2.5),
         cdf_title: str = 'Cumulative Distribution Function (CDF)',
         cdf_y_label: str = 'Cumulative Probability') -> None:
     """
-    Saves a plot of both the CDF and PDF.
+    Saves a plot of both the Cumulative Distribution Function (CDF) and
+    optionally the Probability Density Function (PDF).
 
     Parameters:
-    cdf_function (Dict[float, float]): A dictionary mapping x values to F(x).
+    cdf_function (Dict[float, float]): A dictionary mapping x values to F(x) (CDF values).
+    display (bool): If True, display the plot. If False, just save it.
     filename (str): The name of the file to save the plot as.
+    calculate_pdf (bool): If True, calculate and plot the PDF. Default is True.
+    x_range (Tuple[Union[float, int], Union[float, int]]): The range of x-axis to display. Default is (0, 7).
+    y_range (Tuple[Union[float, int], Union[float, int]]): The range of y-axis to display. Default is (0, 2.5).
+    cdf_title (str): The title for the CDF plot. Default is 'Cumulative Distribution Function (CDF)'.
+    cdf_y_label (str): The y-axis label for the CDF plot. Default is 'Cumulative Probability'.
+
+    Returns:
+    None. The function saves the plot to a file and optionally displays it.
     """
     ax_pdf = 0
     x_values = list(cdf_function.keys())
@@ -293,6 +428,28 @@ def calculate_inverse_from_dict(data: Dict[float, float]) -> dict[float, float]:
     return dict(zip(y_values, x_values))
 
 def fy_inverse_distribution_function(fy_value: float) -> float:
+    """
+    Calculates the inverse of a custom distribution function.
+
+    This function defines a piecewise distribution with specific behaviors
+    in different ranges of the input value.
+
+    Parameters:
+    fy_value (float): The input value, typically between 0 and 1.
+
+    Returns:
+    float: The output of the inverse distribution function.
+
+    The function is defined piecewise as follows:
+    1. For fy_value < 0.5:
+       Linear interpolation from 0 to 0.3
+    2. For fy_value == 0.5:
+       Returns a random value between 0.3 and 0.6
+    3. For 0.5 < fy_value < 1:
+       Linear interpolation from 0.6 to 2
+    4. For fy_value >= 1:
+       Returns a random value between 2 and 1000
+    """
     if fy_value < 0.5:
         return fy_value/(0.5 / 0.3)
     elif fy_value == 0.5:
@@ -303,6 +460,34 @@ def fy_inverse_distribution_function(fy_value: float) -> float:
         return np.random.uniform(2, 1000)
 
 def fz_inverse_distribution_function(fz_value: float) -> float:
+    """
+    Calculates the inverse of a custom distribution function.
+
+    This function defines a piecewise distribution with specific behaviors
+    in different ranges of the input value.
+
+    Parameters:
+    fz_value (float): The input value, typically between 0 and 1.
+
+    Returns:
+    float: The output of the inverse distribution function.
+
+    The function is defined piecewise as follows:
+    1. For fz_value < -0.5:
+       Returns 0
+    2. For -0.5 <= fz_value < 0.2:
+       Linear interpolation from -0.5 to 0.2
+    3. For fz_value == 0.2:
+       Returns a random value between -0.5 and 0.2
+    4. For 0.2 < fz_value < 0.4:
+       Linear interpolation from 0.5 to 1
+    5. For fz_value == 0.4:
+       Returns a random value between 1 and 5
+    6. For 0.4 < fz_value < 1:
+       Linear interpolation from 5 to 7
+    7. For fz_value == 1:
+       Returns a random value greater than 7 (up to 1000)
+    """
     if fz_value < -0.5:
         return 0
     elif -0.5 <= fz_value < 0.2:
@@ -318,18 +503,34 @@ def fz_inverse_distribution_function(fz_value: float) -> float:
     elif fz_value == 1:
         return np.random.uniform(7, 1000)  # Random value greater than 7
 
-def plot_function(func, x_range: tuple, y_range: tuple, num_points: int = 1000, title: str = "Function Plot", x_label: str = "X",
-                  y_label: str = "Y", display: bool = False, file_name:str = "plot.png") -> None:
+def plot_function(func: Callable[[float], float],
+                  x_range: Tuple[float, float],
+                  y_range: Tuple[float, float],
+                  num_points: int = 1000,
+                  title: str = "Function Plot",
+                  x_label: str = "X",
+                  y_label: str = "Y",
+                  display: bool = False,
+                  file_name: str = "plot.png") -> None:
     """
     Plots a given function over a specified range.
 
+    This function creates a plot of the given function over the specified x-range,
+    with customizable labels, title, and display options.
+
     Parameters:
-    - func: The function to plot. It should take a single float argument and return a float.
-    - x_range: A tuple specifying the range of x values (min, max).
-    - num_points: The number of points to evaluate the function (default is 1000).
-    - title: The title of the plot.
-    - x_label: The label for the x-axis.
-    - y_label: The label for the y-axis.
+    - func (Callable[[float], float]): The function to plot. It should take a single float argument and return a float.
+    - x_range (Tuple[float, float]): A tuple specifying the range of x values (min, max).
+    - y_range (Tuple[float, float]): A tuple specifying the range of y values (min, max) for the plot.
+    - num_points (int): The number of points to evaluate the function (default is 1000).
+    - title (str): The title of the plot (default is "Function Plot").
+    - x_label (str): The label for the x-axis (default is "X").
+    - y_label (str): The label for the y-axis (default is "Y").
+    - display (bool): If True, display the plot. If False, just save it (default is False).
+    - file_name (str): The name of the file to save the plot (default is "plot.png").
+
+    Returns:
+    None. The function saves the plot to a file and optionally displays it.
     """
     # Generate x values
     x_values = np.linspace(x_range[0], x_range[1], num_points)
@@ -355,35 +556,44 @@ def plot_function(func, x_range: tuple, y_range: tuple, num_points: int = 1000, 
 
 def calculate_empirical_cdf_probabilities(
         random_floats: List[float],
-        func, # Function that returns F^-1(y) values with the given y
+        func: Callable[[float], float],
         display: bool = False,
-        filename: str = "empirical_cdf_probabilities.png"
-    ):
+        filename: str = "empirical_cdf_probabilities.png",
+    ) -> None:
+    """
+    Calculate and plot the empirical cumulative distribution function (CDF) probabilities.
 
-    # we extract the probability FROM THE CDF CREATED FROM PDF OF UNIFORM.
-    # in cumulative_probabilities we have [1/10 ** 6, 2/ 10**6, ... ], in which indices that we have a unique data, we
-    # extract that probability and then plot it.
-    # When we sort our data, the first point is greater than or equal to 1/n of the data,
-    # the second point is greater than or equal to 2/n of the data, and so on, until the last point which is greater
-    # than or equal to n/n (all) of the data. => Fx(x) =  P( X <= x )
+    This function takes a list of random floats, applies a given function to them,
+    and then calculates and plots the empirical CDF.
 
-    # Suppose we have the following sorted data: [1, 2, 2, 3, 5]
-    #
-    # The cumulative probabilities would be [1/5, 2/5, 3/5, 4/5, 5/5]
-    # This means:
-    #
-    # 1/5 (20%) of the data is ≤ 1
-    # 2/5 (40%) of the data is ≤ 2
-    # 3/5 (60%) of the data is ≤ 3
-    # 4/5 (80%) of the data is ≤ 4
-    # 5/5 (100%) of the data is ≤ 5
-    # this method assumes each data point is equally likely (has equal weight). ( PDF = UNIFORM  )
+    Parameters:
+    - random_floats (List[float]): A list of random float values.
+    - func (Callable[[float], float]): A function that returns F^-1(y) values for given y.
+    - display (bool): If True, display the plot. If False, just save it. Default is False.
+    - filename (str): The filename to save the plot. Default is "empirical_cdf_probabilities.png".
 
+    The function works as follows:
+    1. It applies the given function 'func' to each value in 'random_floats'.
+    2. It sorts these transformed values.
+    3. It creates a uniform CDF (cumulative_probabilities) from 0 to 1 with 10^6 steps.
+    4. It plots the sorted data against the uniform CDF.
+
+    The resulting plot represents the empirical CDF of the transformed data.
+
+    Note:
+    - This method assumes each data point is equally likely (has equal weight),
+      effectively using a uniform probability density function (PDF).
+    - The CDF represents the probability that a value is less than or equal to a given value.
+    """
+
+    # Apply the function to the random floats
     sample_data = [func(value) for value in random_floats]
 
     # Sort the data points
     sorted_data = np.sort(sample_data)
-    cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6 # CDF OF UNIFORM
+
+    # Create uniform CDF
+    cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6  # CDF of uniform distribution
 
     # Plotting the CDF
     plt.figure(figsize=(10, 6))
