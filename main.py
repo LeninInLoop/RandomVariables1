@@ -10,28 +10,33 @@ import numpy as np
 import seaborn as sns
 from scipy import integrate
 
-
 # Counting methods
 METHOD_MANUAL = 0
 METHOD_COUNTER_CLASS = 1
+
+# Empirical CDF Probability methods
+METHOD_AUTO_CDF = 1
+METHOD_RAND = 2
 
 def round_to_decimals(value: float, decimal_places: int = 0) -> float:
     """
     Custom round function to round a number to the specified number of decimal places.
 
-    The built-in round function rounds to the closest even number, which may not be desirable
-    in all cases. This function ensures that numbers are rounded to the nearest value,
-    providing consistent results for all inputs.
+    This function handles both positive and negative numbers correctly, ensuring
+    that numbers are rounded to the nearest value, providing consistent results for all inputs.
 
     Parameters:
-    n (float): The number to be rounded.
-    decimals (int): The number of decimal places to round to (default is 0).
+    value (float): The number to be rounded.
+    decimal_places (int): The number of decimal places to round to (default is 0).
 
     Returns:
     float: The rounded number.
     """
     multiplier = 10 ** decimal_places
-    return (value * multiplier + 0.5) // 1 / multiplier
+    if value >= 0:
+        return (value * multiplier + 0.5) // 1 / multiplier
+    else:
+        return -((-value * multiplier + 0.5) // 1) / multiplier
 
 def display_results(value_counts: Dict[float, int]) -> None:
     """
@@ -69,19 +74,26 @@ def display_results(value_counts: Dict[float, int]) -> None:
 def generate_random_floats() -> List[float]:
     return [value for value in np.random.random( 10 ** 6 )]
 
-def create_value_bins() -> List[float]:
-    return [i / 1000.0 for i in range(1001)]
+def create_value_bins(x_range:Tuple[Union[int],Union[int]] = (0,1001)) -> List[float]:
+    return np.linspace(x_range[0],x_range[1],1000).tolist()
+    # return [i / 1000.0 for i in range(x_range[0],x_range[1])]
 
-def initialize_value_count_dict() -> Dict[float, int]:
+def initialize_value_count_dict(x_range:Tuple[Union[int],Union[int]] = (0,1)) -> Dict[float, int]:
     """
     Initialize a dictionary for counting occurrences of each bin value.
 
     Returns:
     Dict[float, int]: A dictionary with bin values as keys and 0 as initial counts.
     """
-    return {i / 1000.0: 0 for i in range(1001)}
+    values = np.linspace(x_range[0],x_range[1],1000).tolist()
+    return {round_to_decimals(value, 3):0 for value in values}
 
-def count_values_by_method(value_bins: List[float], random_floats: List[float], method: int) -> Dict[float, int]:
+def count_values_by_method(
+        value_bins: List[float],
+        random_floats: List[float],
+        method: int,
+        x_range:Tuple[Union[int],Union[int]] = (0,1)
+) -> Dict[float, int]:
     """
     Count occurrences of rounded random floats in the specified value bins using a specified method.
 
@@ -95,7 +107,7 @@ def count_values_by_method(value_bins: List[float], random_floats: List[float], 
     Returns:
     Dict[float, int]: A dictionary where keys are bin values and values are the counts of occurrences.
     """
-    value_count_dict = initialize_value_count_dict()
+    value_count_dict = initialize_value_count_dict(x_range)
     rounded_random_floats = [round_to_decimals(value, 3) for value in random_floats]
     if method == METHOD_MANUAL:  # O(n^2) Algorithm
         for bin_value in value_bins:
@@ -124,7 +136,13 @@ def calculate_cdf_from_pdf(pdf_values: List[float], x_values: List[float]) -> np
     return integrate.cumulative_trapezoid(pdf_values, x_values, dx=0.001, initial=0)
 
 
-def save_pdf_and_cdf_plot_from_pdf(value_counts: Dict[float, int], display: bool, filename: str = "pdf_and_cdf_plot.png"):
+def save_pdf_and_cdf_plot_from_pdf(
+        value_counts: Dict[float, int],
+        display: bool,
+        filename: str = "pdf_and_cdf_plot.png",
+        show_histogram: bool = True,
+        x_range: Tuple[int, int] = None,
+):
     """
     Saves a plot with both the Probability Density Function (PDF) in two formats:
     a histogram-based PDF and a line plot, as well as the Cumulative Distribution Function (CDF).
@@ -140,20 +158,27 @@ def save_pdf_and_cdf_plot_from_pdf(value_counts: Dict[float, int], display: bool
     - Computes and plots the CDF based on the PDF data.
     - Displays the plot if `display` is True, or saves it to a file if `display` is False.
     """
-    x_values = list(value_counts.keys())
+    if x_range is None:
+        x_values = list(value_counts.keys())
+    else:
+        x_values = create_value_bins(x_range=x_range)
     y_values = [count / 1000 for count in value_counts.values()]
 
     plt.figure(figsize=(12, 10))
 
-    # Create figure and subplots
-    fig, (ax_pdf_hist, ax_pdf, ax_cdf) = plt.subplots(3, 1, figsize=(12, 12), height_ratios=[1, 1, 1])
-    fig.subplots_adjust(hspace=0.4)  # Increase space between subplots
+    if show_histogram:
+        # Create figure and subplots
+        fig, (ax_pdf_hist, ax_pdf, ax_cdf) = plt.subplots(3, 1, figsize=(12, 12), height_ratios=[1, 1, 1])
+        fig.subplots_adjust(hspace=0.4)  # Increase space between subplots
+        # Plot PDF with Histogram
+        sns.histplot(x_values[1:-1], bins=1000, kde=False, color='blue', alpha=0.5, ax=ax_pdf_hist)
+        ax_pdf_hist.set_xlabel('X Values\n\n')
+        ax_pdf_hist.set_ylabel('PDF')
+        ax_pdf_hist.set_title('PDF: Probability Density Function (With 1000 Histograms)')
 
-    # Plot PDF with Histogram
-    sns.histplot(x_values[1:-1], bins=1000, kde=False, color='blue', alpha=0.5, ax=ax_pdf_hist)
-    ax_pdf_hist.set_xlabel('X Values\n\n')
-    ax_pdf_hist.set_ylabel('PDF')
-    ax_pdf_hist.set_title('PDF: Probability Density Function (With 1000 Histograms)')
+    else:
+        fig, (ax_pdf, ax_cdf) = plt.subplots(2, 1, figsize=(12, 12), height_ratios=[1, 1])
+        fig.subplots_adjust(hspace=0.4)  # Increase space between subplots
 
     # Plot PDF without Histogram
     ax_pdf.plot(x_values[1:-1], y_values[1:-1], color='blue')
@@ -559,6 +584,7 @@ def calculate_empirical_cdf_probabilities(
         func: Callable[[float], float],
         display: bool = False,
         filename: str = "empirical_cdf_probabilities.png",
+        method: int = METHOD_AUTO_CDF
     ) -> None:
     """
     Calculate and plot the empirical cumulative distribution function (CDF) probabilities.
@@ -592,21 +618,32 @@ def calculate_empirical_cdf_probabilities(
     # Sort the data points
     sorted_data = np.sort(sample_data)
 
-    # Create uniform CDF
-    cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6  # CDF of uniform distribution
-
-    # Plotting the CDF
-    plt.figure(figsize=(10, 6))
-    plt.step(sorted_data, cumulative_probabilities, where='post')
-    plt.xlabel('Value')
-    plt.ylabel('Cumulative Probability')
-    plt.title('Cumulative Distribution Function')
-    plt.grid(True)
-    plt.savefig(filename)
-    if display:
-        plt.show()
-    else:
-        plt.close()
+    print(sorted_data)
+    # # Create uniform CDF
+    if method == 1:
+        cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6  # CDF of uniform distribution
+        # Plotting the CDF
+        plt.figure(figsize=(10, 6))
+        plt.plot(sorted_data, cumulative_probabilities)
+        plt.xlabel('Value')
+        plt.ylabel('Cumulative Probability')
+        plt.title('Cumulative Distribution Function')
+        plt.grid(True)
+        plt.savefig(filename)
+        if display:
+            plt.show()
+        else:
+            plt.close()
+    elif method == 2:
+        value_bins = create_value_bins(x_range=(-1,9))
+        counted_values = count_values_by_method(value_bins, sorted_data.tolist(), method=METHOD_COUNTER_CLASS, x_range=(-1,9))
+        save_pdf_and_cdf_plot_from_pdf(
+            counted_values,
+            display=display,
+            filename=filename,
+            show_histogram = False,
+            x_range=(-1, 9)
+        )
 
 def main():
     random_floats = generate_random_floats()
@@ -669,13 +706,23 @@ def main():
         file_name="F^-1(y)_PLOT_DIRECTLY.png"
         )
 
-
-    # Calculate and plot the CDF of Fy(y)
+    # Calculate and plot the CDF of Fy(z)
+    # USING AUTO CDF ( EXPLAINED IN THE FUNCTION )
     calculate_empirical_cdf_probabilities(
         random_floats,
-        fy_inverse_distribution_function,
+        fz_inverse_distribution_function,
+        display=False,
+        filename="empirical_cdf_probability_of_Fy(y)_AUTO.png",
+        method=METHOD_AUTO_CDF
+    )
+
+    # USING RAND METHOD: WE COUNT THE OCCURRENCE OF EACH INTERVAL MANUALLY
+    calculate_empirical_cdf_probabilities(
+        random_floats,
+        fz_inverse_distribution_function,
         display=True,
-        filename="empirical_cdf_probability_of_Fy(y).png"
+        filename="empirical_cdf_probability_of_Fy(y)_RAND.png",
+        method=METHOD_RAND
     )
 
 # -----------------------------------------------------------------------------------------------------
@@ -729,11 +776,22 @@ def main():
         )
 
     # Calculate and plot the CDF of Fz(z)
+    # USING AUTO CDF ( EXPLAINED IN THE FUNCTION )
+    calculate_empirical_cdf_probabilities(
+        random_floats,
+        fz_inverse_distribution_function,
+        display=False,
+        filename="empirical_cdf_probability_of_Fz(z)AUTO.png",
+        method=METHOD_AUTO_CDF
+    )
+
+    # USING RAND METHOD: WE COUNT THE OCCURRENCE OF EACH INTERVAL MANUALLY
     calculate_empirical_cdf_probabilities(
         random_floats,
         fz_inverse_distribution_function,
         display=True,
-        filename="empirical_cdf_probability_of_Fz(z).png"
+        filename="empirical_cdf_probability_of_Fz(z)_RAND.png",
+        method=METHOD_RAND
     )
 
 if __name__ == "__main__":
