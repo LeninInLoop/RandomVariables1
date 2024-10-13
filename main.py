@@ -618,7 +618,6 @@ def calculate_empirical_cdf_probabilities(
     # Sort the data points
     sorted_data = np.sort(sample_data)
 
-    print(sorted_data)
     # # Create uniform CDF
     if method == 1:
         cumulative_probabilities = np.arange(0, 10 ** 6) / 10 ** 6  # CDF of uniform distribution
@@ -719,7 +718,7 @@ def main():
     # USING RAND METHOD: WE COUNT THE OCCURRENCE OF EACH INTERVAL MANUALLY
     calculate_empirical_cdf_probabilities(
         random_floats,
-        fz_inverse_distribution_function,
+        fy_inverse_distribution_function,
         display=True,
         filename="empirical_cdf_probability_of_Fy(y)_RAND.png",
         method=METHOD_RAND
