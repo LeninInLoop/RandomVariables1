@@ -139,7 +139,7 @@ def calculate_cdf_from_pdf(pdf_values: List[float], x_values: List[float]) -> np
 def save_pdf_and_cdf_plot_from_pdf(
         value_counts: Dict[float, int],
         display: bool,
-        filename: str = "pdf_and_cdf_plot.png",
+        file_name: str = "pdf_and_cdf_plot.png",
         show_histogram: bool = True,
         x_range: Tuple[int, int] = None,
 ):
@@ -151,11 +151,15 @@ def save_pdf_and_cdf_plot_from_pdf(
     value_counts (Dict[float, int]): A dictionary where keys are x-values and values are frequencies (PDF).
     display (bool): If True, display the plot interactively; if False, save the plot as an image.
     filename (str): The name of the file to save the plot as (default is 'pdf_and_cdf_plot.png').
+    show_histogram (bool, optional): If True, include a histogram representation of the PDF. Default is True.
+    x_range (Tuple[int, int], optional): The range of x-values to use. If None, uses the keys from value_counts. Default is None.
 
     The function performs the following:
-    - Plots a histogram to represent the PDF (using the frequency from value_counts).
-    - Plots the PDF as a smooth line without a histogram.
+    - If show_histogram is True, plots a histogram to represent the PDF (using the frequency from value_counts).
+    - Plots the PDF as a smooth line plot.
     - Computes and plots the CDF based on the PDF data.
+    - Adjusts the plot layout based on whether the histogram is shown or not.
+    - If x_range is provided, uses it to create value bins; otherwise, uses the keys from value_counts.
     - Displays the plot if `display` is True, or saves it to a file if `display` is False.
     """
     if x_range is None:
@@ -200,7 +204,7 @@ def save_pdf_and_cdf_plot_from_pdf(
 
     # Adjust layout and save the plot
     plt.tight_layout()
-    plt.savefig(filename)
+    plt.savefig(file_name)
     if display:
         plt.show()
     else:
@@ -583,7 +587,7 @@ def calculate_empirical_cdf_probabilities(
         random_floats: List[float],
         func: Callable[[float], float],
         display: bool = False,
-        filename: str = "empirical_cdf_probabilities.png",
+        file_name: str = "empirical_cdf_probabilities.png",
         method: int = METHOD_AUTO_CDF
     ) -> None:
     """
@@ -596,13 +600,22 @@ def calculate_empirical_cdf_probabilities(
     - random_floats (List[float]): A list of random float values.
     - func (Callable[[float], float]): A function that returns F^-1(y) values for given y.
     - display (bool): If True, display the plot. If False, just save it. Default is False.
-    - filename (str): The filename to save the plot. Default is "empirical_cdf_probabilities.png".
+    - file_name (str): The filename to save the plot. Default is "empirical_cdf_probabilities.png".
+    - method (int): The method to use for CDF calculation. Default is METHOD_AUTO_CDF.
+                    METHOD_AUTO_CDF (1): Uses a uniform CDF with 10^6 steps.
+                    METHOD_RAND (2): Uses value binning and counting for CDF calculation.
 
     The function works as follows:
     1. It applies the given function 'func' to each value in 'random_floats'.
     2. It sorts these transformed values.
-    3. It creates a uniform CDF (cumulative_probabilities) from 0 to 1 with 10^6 steps.
-    4. It plots the sorted data against the uniform CDF.
+    3. Depending on the method:
+       - For METHOD_AUTO_CDF:
+         a. It creates a uniform CDF (cumulative_probabilities) from 0 to 1 with 10^6 steps.
+         b. It plots the sorted data against the uniform CDF.
+       - For METHOD_RAND:
+         a. It creates value bins in the range (-1, 9).
+         b. It counts the values using the METHOD_COUNTER_CLASS.
+         c. It uses save_pdf_and_cdf_plot_from_pdf to create the plot.
 
     The resulting plot represents the empirical CDF of the transformed data.
 
@@ -610,6 +623,7 @@ def calculate_empirical_cdf_probabilities(
     - This method assumes each data point is equally likely (has equal weight),
       effectively using a uniform probability density function (PDF).
     - The CDF represents the probability that a value is less than or equal to a given value.
+    - The choice of method can affect the granularity and representation of the CDF.
     """
 
     # Apply the function to the random floats
@@ -628,7 +642,7 @@ def calculate_empirical_cdf_probabilities(
         plt.ylabel('Cumulative Probability')
         plt.title('Cumulative Distribution Function')
         plt.grid(True)
-        plt.savefig(filename)
+        plt.savefig(file_name)
         if display:
             plt.show()
         else:
@@ -639,7 +653,7 @@ def calculate_empirical_cdf_probabilities(
         save_pdf_and_cdf_plot_from_pdf(
             counted_values,
             display=display,
-            filename=filename,
+            file_name=file_name,
             show_histogram = False,
             x_range=(-1, 9)
         )
@@ -653,7 +667,7 @@ def main():
     save_pdf_and_cdf_plot_from_pdf(
         counted_values,
         display=False,
-        filename="rand_pdf_and_cdf_plot.png"
+        file_name="rand_pdf_and_cdf_plot.png"
     )
 
     # METHOD 1 : ( INCLUDES PDF FUNCTION CALCULATIONS )
@@ -711,7 +725,7 @@ def main():
         random_floats,
         fz_inverse_distribution_function,
         display=False,
-        filename="empirical_cdf_probability_of_Fy(y)_AUTO.png",
+        file_name="empirical_cdf_probability_of_Fy(y)_AUTO.png",
         method=METHOD_AUTO_CDF
     )
 
@@ -720,7 +734,7 @@ def main():
         random_floats,
         fy_inverse_distribution_function,
         display=True,
-        filename="empirical_cdf_probability_of_Fy(y)_RAND.png",
+        file_name="empirical_cdf_probability_of_Fy(y)_RAND.png",
         method=METHOD_RAND
     )
 
@@ -780,7 +794,7 @@ def main():
         random_floats,
         fz_inverse_distribution_function,
         display=False,
-        filename="empirical_cdf_probability_of_Fz(z)AUTO.png",
+        file_name="empirical_cdf_probability_of_Fz(z)AUTO.png",
         method=METHOD_AUTO_CDF
     )
 
@@ -789,7 +803,7 @@ def main():
         random_floats,
         fz_inverse_distribution_function,
         display=True,
-        filename="empirical_cdf_probability_of_Fz(z)_RAND.png",
+        file_name="empirical_cdf_probability_of_Fz(z)_RAND.png",
         method=METHOD_RAND
     )
 
